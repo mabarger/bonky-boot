@@ -1,0 +1,2 @@
+echo + target remote localhost:27000\n
+target remote localhost:27000
