@@ -5,3 +5,4 @@ typedef char bool;
 
 // Fixed-size integers
 typedef char uint8_t;
+typedef int uint32_t;
