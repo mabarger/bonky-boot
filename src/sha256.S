@@ -9,71 +9,135 @@ h:
 
 # t0, t1, returns t0
 .macro rotate_left x, shift
-slli t0, \x, \shift
-srli t1, \x, (32 - \shift)
-or t0, t0, t1
+	slli t0, \x, \shift
+	srli t1, \x, (32 - \shift)
+	or t0, t0, t1
 .endm
 
 # t0, t1, returns t0
 .macro rotate_right x, shift
-srli t0, \x, \shift
-slli t1, \x, (32 - \shift)
-or t0, t0, t1
+	srli t0, \x, \shift
+	slli t1, \x, (32 - \shift)
+	or t0, t0, t1
 .endm
 
 # t0, t1, t2, returns t0
 .macro sigma0 x
-rotate_right \x, 7
-addi t2, t0, 0
-rotate_right \x, 18
-xor t2, t2, t0
-srli t0, \x, 3
-xor t0, t2, t0
+	rotate_right \x, 7
+	addi t2, t0, 0
+	rotate_right \x, 18
+	xor t2, t2, t0
+	srli t0, \x, 3
+	xor t0, t2, t0
 .endm
 
 # t0, t1, t2, returns t0
 .macro sigma1 x
-rotate_right \x, 17
-addi t2, t0, 0
-rotate_right \x, 19
-xor t2, t2, t0
-srli t0, \x, 10
-xor t0, t2, t0
+	rotate_right \x, 17
+	addi t2, t0, 0
+	rotate_right \x, 19
+	xor t2, t2, t0
+	srli t0, \x, 10
+	xor t0, t2, t0
 .endm
 
 # t0, t1, t2, returns t0
 .macro epsilon0 x
-rotate_right \x, 2
-addi t2, t0, 0
-rotate_right \x, 13
-xor t2, t2, t0
-rotate_right \x, 22
-xor t0, t2, t0
+	rotate_right \x, 2
+	addi t2, t0, 0
+	rotate_right \x, 13
+	xor t2, t2, t0
+	rotate_right \x, 22
+	xor t0, t2, t0
 .endm
 
 # t0, t1, t2, returns t0
 .macro epsilon1 x
-rotate_right \x, 6
-addi t2, t0, 0
-rotate_right \x, 11
-xor t2, t2, t0
-rotate_right \x, 25
-xor t0, t2, t0
+	rotate_right \x, 6
+	addi t2, t0, 0
+	rotate_right \x, 11
+	xor t2, t2, t0
+	rotate_right \x, 25
+	xor t0, t2, t0
 .endm
 
 # t0, t1, returns t0
 .macro maj x, y, z
-and t0, \x, \y
-and t1, \x, \z
-xor t0, t0, t1
-and t1, \y, \z
-xor t0, t0, t1
+	and t0, \x, \y
+	and t1, \x, \z
+	xor t0, t0, t1
+	and t1, \y, \z
+	xor t0, t0, t1
 .endm 
 
 .macro ch x, y, z
-and t0, \x, \y
-# TODO
+	and t0, \x, \y
+	# TODO
+.endm
+
+
+# s2 = a
+# s3 = b
+# s4 = c
+# s5 = d
+# s6 = e
+# s7 = f
+# s8 = g
+# s9 = h
+.macro init_h
+
+.endm
+
+# uses sigma0, sigma1, ch, maj (can't use t0-t2)
+# uses t3-t4, does not returns and updates the initial values
+.macro sha256_round a, b, c, d, e, f, g, h, k, w
+	# t3 is T1, t4 is T2
+	## T1
+	# load h in T1
+	addi t3, 0, \h
+	# epsilon1(e)
+	epsilon1 \e
+	# add epsilon1 to T1
+	addu t3, t0, t3
+	# ch(e, f, g)
+	ch \e \f \g
+	# add ch to T1
+	addu t3, t0, t3
+	# add k to T1
+	addu t3, \k, t3
+	# add w to T1
+	addu t3, \w, t3
+	## T2
+	addu t4, x0, x0
+	# epsilon0(a)
+	epsilon0 \a
+	# add epsilon1 to T2
+	addu t4, t0, t4
+	# maj(a, b, c)
+	maj \a, \b, \c
+	# add maj to T2
+	addu t4, t0, t4
+
+	# start swapping registers, can use again t0, t1, t2 as temporary if needed
+	# h = g
+	addi \h, 0, \g
+	# g = f
+	addi \g, 0, \f
+	# f = e
+	addi \f, 0, \e
+	# e = d + T1
+	addi \e, 0, d
+	add \e, t3, \e
+	# d = c
+	addi \d, 0, \c
+	# c = b
+	addi \c, 0, \b
+	# b = a
+	addi \b, 0, \a
+	# a = T1+T2
+	addi \a, 0, t3
+	add \a, t4m \a
 .endm
 
 sha256:
-addi a0, a0, 1
+	addi a0, a0, 1
