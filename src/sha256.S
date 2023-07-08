@@ -6,7 +6,7 @@ k:
 	.word 0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 h:
 	.word 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-chunk:
+state:
 	.word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 # t0, t1, returns t0
@@ -24,23 +24,23 @@ chunk:
 .endm
 
 # use t0, t1, t2, returns t0
-.macro load_little_to_big address
-	lw t0, 0(\address)
-	mv t1, t0
+.macro little_to_big register
+	#lw \register, 0(\address)
+	mv t1, \register
 	mv t2, x0
 	srli t1, t1, 24
 	or t2, t2, t1
-	mv t1, t0
+	mv t1, \register
 	slli t1, t1, 8
 	srli t1, t1, 24
 	slli t1, t1, 8
 	or t2, t2, t1
-	mv t1, t0
+	mv t1, \register
 	slli t1, t1, 16
 	srli t1, t1, 24
 	slli t1, t1, 16
 	or t2, t2, t1
-	mv t1, t0
+	mv t1, \register
 	slli t1, t1, 24
 	or t2, t2, t1
 	mv t0, t2
@@ -192,12 +192,14 @@ chunk:
 	rem t3, \length, t3
 	# get the aligned size
 	# 9-1=8, (t1=8)
-	sub t1, \length, t3
+	#sub t1, \length, t3
 	# add the aligned size at the starting address
 	# load in t5
-	add t2, t1, \address
+	#add t2, t1, \address
 	# and its the length in t0
-	load_little_to_big t2
+	#lw t0, 0(t2)
+	lw t0, 0(\address)
+	little_to_big t0
 	# we need to zero out the extra data
 	# and add the famous 1 bit
 	# get a register that is 0xFFFFFFFF
@@ -250,10 +252,37 @@ sha256:
 
 		final_block:
 			li t0, 4
-			div t0, a1, t0 
-			word_loop:
+			# how many blocks of data? in t5
+			div t3, a1, t0
+			# load the target of the 64 bytes state
+			la t4, state 
+
+			populate_data:
+				# load te current 4 bye word
+				lw t0, 0(a0)
+				# swap endianess
+				little_to_big t0
+				# store the word with the new endianess in the target
+				sw t0, 0(t4)
+				# move the target state address
+				addi t4, t4, 4
+				# move the source address
+				addi a0, a0, 4
+				# decrement the leftover words counter
+				add t3, t3, -1
+				# loop if there is still data
+				bnez t3, populate_data
+				
+				# we could load x0 in all the other addresses
+				# but they are already initialized at 0
 
 			load_and_pad_last_word a0, a1
+			sw t0, 0(t4)
+			# why don't we switch endianess here?
+			#little_to_big s1
+			la t1, state
+			sw s1, 60(t1)
+
 
 	## save the final hash back to the provided ptr
 	sha256_save s2, s3, s4, s5, s6, s7, s8, s9, a2
