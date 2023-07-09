@@ -98,7 +98,7 @@ h:
 .macro ch x, y, z
 	# (𝑥∧𝑦)⊕(¬𝑥∧𝑧)
 	and t0, \x, \y
-	xor t1, -1, \x
+	xor t1, \x, -1
 	and t2, t1, \z
 	xor t0, t2, t0
 .endm
@@ -147,25 +147,25 @@ h:
 	# epsilon1(e)
 	epsilon1 \e
 	# add epsilon1 to T1
-	addu t3, t0, t3
+	add t3, t0, t3
 	# ch(e, f, g)
 	ch \e \f \g
 	# add ch to T1
-	addu t3, t0, t3
+	add t3, t0, t3
 	# add k to T1
-	addu t3, \k, t3
+	add t3, \k, t3
 	# add w to T1
-	addu t3, \w, t3
+	add t3, \w, t3
 	## T2
-	addu t4, x0, x0
+	add t4, x0, x0
 	# epsilon0(a)
 	epsilon0 \a
 	# add epsilon1 to T2
-	addu t4, t0, t4
+	add t4, t0, t4
 	# maj(a, b, c)
 	maj \a, \b, \c
 	# add maj to T2
-	addu t4, t0, t4
+	add t4, t0, t4
 
 	# start swapping registers, can use again t0, t1, t2 as temporary if needed
 	# h = g
@@ -176,7 +176,7 @@ h:
 	mv \f, \e
 	# e = d + T1
 	mv \e, \d
-	addu \e, t3, \e
+	add \e, t3, \e
 	# d = c
 	mv \d, \c
 	# c = b
@@ -185,7 +185,7 @@ h:
 	mv \b, \a
 	# a = T1+T2
 	mv \a, t3
-	addu \a, t4, \a
+	add \a, t4, \a
 .endm
 
 # uses t0, t1, t2, t3, returns t0
@@ -246,7 +246,7 @@ sha256:
 	## init hash registers with the h values
 	sha256_init s2, s3, s4, s5, s6, s7, s8, s9
 
-	round_loop:
+	outer_loop:
 		# is it the last block? 55 bytes = 440 bits
 		li t0, 55
 		ble a1, t0, final_block
@@ -287,8 +287,37 @@ sha256:
 			sw t0, 0(t4)
 			# why don't we switch endianess here?
 			#little_to_big s1
-			la t1, h
-			sw s1, 60(t1)
+			la t4, h
+			# size is in bits so multiply first
+			slli t0, s1, 3
+			sw t0, 60(t4)
+
+		hashing:
+			# here we start the hashing process
+			# h is already in t4
+			la t5, h
+			la t6, k
+			# initalize round counter
+			mv a7, x0
+			round_loop:
+				addi t0, x0, 65
+				beq t0, a7, round_end
+				# load w
+				lw a3, 0(t5)
+				# load k
+				lw a4, 0(t6)
+
+				sha256_update s2, s3, s4, s5, s6, s7, s8, s9, a4, a3
+		
+				# increment counter
+				addi a7, a7, 1
+				# increment w pointer but wrap around
+				addi t5, t5, 4
+				# increment k pointer
+				addi t6, t6, 4
+				j round_loop
+			round_end:
+
 
 
 	## save the final hash back to the provided ptr
