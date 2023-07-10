@@ -137,7 +137,7 @@ h:
 	sw \h, 28(\destination)
 .endm
 
-# uses sigma0, sigma1, ch, maj (can't use t0-t2)
+# uses epsilon0, epsilon1, ch, maj (can't use t0-t2)
 # uses t3-t4, does not returns and updates the initial values
 .macro sha256_update a, b, c, d, e, f, g, h, k, w
 	# t3 is T1, t4 is T2
@@ -186,6 +186,43 @@ h:
 	# a = T1+T2
 	mv \a, t3
 	add \a, t4, \a
+.endm
+
+# uses t0, t1, t2, t3, t4, returns the word in t0
+# also updates it in ram at the correct position
+.macro word_calc_update base_pointer, current_index, return
+	addi t0, \current_index, 14
+	li t1, 16
+	rem t0, t0, t1
+	slli t0, t0, 2
+	add t0, t0, \base_pointer
+	lw t3, 0(t0)
+	sigma1 t3
+	mv t3, t0
+	addi t0, \current_index, 9
+	li t1, 16
+	rem t0, t0, t1
+	slli t0, t0, 2
+	add t0, t0, \base_pointer
+	lw t4, 0(t0)
+	add t3, t3, t4
+	addi t0, \current_index, 1
+	li t1, 16
+	rem t0, t0, t1
+	slli t0, t0, 2
+	add t0, t0, \base_pointer
+	lw t4, 0(t0)
+	sigma0 t4
+	mv t4, t0
+	add t3, t3, t4
+	li t1, 16
+	rem t0, \current_index, t1
+	slli t0, t0, 2
+	add t0, t0, \base_pointer
+	lw t4, 0(t0)
+	add t3, t3, t4
+	sw t3, 0(t0)
+	mv \return, t3
 .endm
 
 # uses t0, t1, t2, t3, returns t0
@@ -294,31 +331,49 @@ sha256:
 
 		hashing:
 			# here we start the hashing process
-			# h is already in t4
 			la t5, h
 			la t6, k
 			# initalize round counter
-			mv a7, x0
+			addi a7, x0, 0
 			round_loop:
-				addi t0, x0, 65
-				beq t0, a7, round_end
+				addi t0, x0, 64
+				ble t0, a7, round_end
 				# load w
-				lw a3, 0(t5)
+				# wrap around every 16 so that we reuse
+				# the same 16 bytes of ram
+				#rem t0, a7, 16
+				# but we start at 0
+
+				# word_calc_update base_pointer, current_index
+				# uses t0, t1, t2, t3, t4, returns the word in t0
+				li t0, 16
+				bge a7, t0, next_48
+
+				first_16:
+					slli t0, a7, 2
+					add t0, t0, t5
+					lw a3, 0(t0)
+					j skip
+
+				next_48:
+					word_calc_update t5, a7, a3
+
+				skip:
+
 				# load k
 				lw a4, 0(t6)
 
+				# uses epsilon0, epsilon1, ch, maj (can't use t0-t2)
+				# uses t3-t4, does not returns and updates the initial values
 				sha256_update s2, s3, s4, s5, s6, s7, s8, s9, a4, a3
-		
+
 				# increment counter
 				addi a7, a7, 1
-				# increment w pointer but wrap around
-				addi t5, t5, 4
 				# increment k pointer
 				addi t6, t6, 4
 				j round_loop
+			
 			round_end:
-
-
 
 	## save the final hash back to the provided ptr
 	sha256_save s2, s3, s4, s5, s6, s7, s8, s9, a2
