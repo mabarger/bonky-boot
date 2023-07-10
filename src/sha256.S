@@ -286,25 +286,18 @@ sha256:
 	sha256_init s2, s3, s4, s5, s6, s7, s8, s9
 
 	outer_loop:
+		# is there no data left?
+		beqz a1, sha256_finish
 		# is it the last block? 55 bytes = 440 bits
+		la t4, state
 		li t0, 55
 		ble a1, t0, final_block
 
 		intermediate_block:
-
-		# increase start address
-		# decrease left counter
-		j round_loop
-
-		final_block:
-			li t0, 4
-			# how many blocks of data? in t5
-			div t3, a1, t0
-			# load the target of the 64 bytes state
-			la t4, state
-
-			populate_data:
-				# load te current 4 bye word
+			li t3, 16
+			# just copy the data in the state
+			populate_data_intermediate:
+				# load te current 4 byte word
 				lw t0, 0(a0)
 				# swap endianess
 				little_to_big t0
@@ -317,19 +310,55 @@ sha256:
 				# decrement the leftover words counter
 				add t3, t3, -1
 				# loop if there is still data
-				bnez t3, populate_data
-				
-				# we could load x0 in all the other addresses
-				# but they are already initialized at 0
+				bnez t3, populate_data_intermediate
 
+			# decrease left counter
+			add a1, a1, -64
+			j hashing
+
+		final_block:
+			li t0, 4
+			# how many blocks of data? in t5
+			div t3, a1, t0
+			li t5, 14
+			sub t5, t5, t3
+			# load the target of the 64 bytes state
+			
+			populate_data_final:
+				# load te current 4 byte word
+				lw t0, 0(a0)
+				# swap endianess
+				little_to_big t0
+				# store the word with the new endianess in the target
+				sw t0, 0(t4)
+				# move the target state address
+				addi t4, t4, 4
+				# move the source address
+				addi a0, a0, 4
+				# decrement the leftover words counter
+				add t3, t3, -1
+				# loop if there is still data
+				bnez t3, populate_data_final
+			
+				
 			load_and_pad_last_word a0, a1
 			sw t0, 0(t4)
+			addi t4, t4, 4
 			# why don't we switch endianess here?
 			#little_to_big s1
-			la t4, state
+			# zero fill everything else
+			zero_fill:
+				sw x0, 0(t4)
+				addi t4, t4, 4
+				addi t5, t5, -1
+				bnez t5, zero_fill
+
+			#la t4, state
 			# size is in bits so multiply first
 			slli t0, s1, 3
-			sw t0, 60(t4)
+			sw t0, 0(t4)
+			# no more data
+			xor a1, a1, a1
 
 		hashing:
 			# here we start the hashing process
@@ -377,24 +406,36 @@ sha256:
 			
 			round_end:
 				# sum the original h0-h7 again as per specification
+				# and update h0-h7 with these round ones
 				la t0, h
 				lw t1, 0(t0)
 				add s2, s2, t1
+				sw s2, 0(t0)
 				lw t1, 4(t0)
 				add s3, s3, t1
+				sw s3, 4(t0)
 				lw t1, 8(t0)
 				add s4, s4, t1
+				sw s4, 8(t0)
 				lw t1, 12(t0)
 				add s5, s5, t1
+				sw s5, 12(t0)
 				lw t1, 16(t0)
 				add s6, s6, t1
+				sw s6, 16(t0)
 				lw t1, 20(t0)
 				add s7, s7, t1
+				sw s7, 20(t0)
 				lw t1, 24(t0)
 				add s8, s8, t1
+				sw s8, 24(t0)
 				lw t1, 28(t0)
 				add s9, s9, t1
+				sw s9, 28(t0)
+			
+			j outer_loop
 
-	## save the final hash back to the provided ptr
-	sha256_save s2, s3, s4, s5, s6, s7, s8, s9, a2
-	ret
+	sha256_finish:
+		## save the final hash back to the provided ptr
+		sha256_save s2, s3, s4, s5, s6, s7, s8, s9, a2
+		ret
