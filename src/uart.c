@@ -1,3 +1,4 @@
+#include <memory.h>
 #include <uart.h>
 
 #define UART_THR	UART_BASE + 0x00

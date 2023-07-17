@@ -2,33 +2,35 @@ BASE    = riscv64-unknown-elf
 ARCH	= rv32imac
 ABI		= ilp32
 CC      = $(BASE)-gcc
-FLAGS   = -mabi=$(ABI) -march=$(ARCH) -nostartfiles -g
-LDFLAGS = -m elf32lriscv
+FLAGS   = -mabi=$(ABI) -march=$(ARCH) -nostartfiles -Os -ffreestanding -g
+LDFLAGS = -m elf32lriscv -N
 LD      = $(BASE)-ld
+STRIP   = ${BASE}-strip
 OBJCOPY = $(BASE)-objcopy
 
 GDB          = gdb-multiarch
 QEMU	     = qemu-system-riscv32
-QEMUOPTS     = -M virt -bios none -serial stdio -display none -kernel main.img
+QEMUOPTS     = -M virt -bios none -serial stdio -display none -kernel bonky-boot.img
 QEMUOPTS_GDB = -gdb tcp::27000 -S ${QEMUOPTS}
 
-all: clean main.img
+all: clean bonky-boot.img
 
-main.img: main.elf
-	$(OBJCOPY) main.elf -I binary main.img
+bonky-boot.img: bonky-boot.elf
+	$(OBJCOPY) bonky-boot.elf -I binary bonky-boot.img
+	${STRIP} bonky-boot.img
 
-main.elf: main.o
-	$(LD) $(LDFLAGS) -T linker.ld -o main.elf *.o libtommath.a
+bonky-boot.elf: bonky-boot.o
+	$(LD) $(LDFLAGS) -T linker.ld -o bonky-boot.elf *.o
 
-main.o:
+bonky-boot.o:
 	$(CC) $(FLAGS) -c src/* -I inc
 
 clean:
-	rm -f *.o main.elf main.img
+	rm -f *.o bonky-boot.elf bonky-boot.img
 
-run: main.img
+run: bonky-boot.img
 	$(QEMU) $(QEMUOPTS) &
 
-gdb: main.img
+gdb: bonky-boot.img
 	$(QEMU) $(QEMUOPTS_GDB) &
-	${GDB} -x .gdbrc ./main.elf
+	${GDB} -x .gdbrc ./bonky-boot.elf
