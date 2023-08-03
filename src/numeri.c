@@ -1,9 +1,10 @@
 #include <memory.h>
 #include <numeri.h>
+#include <util.h>
 
-/* Cache that contains the available big numbers*/
+/* Cache that contains the available big integers */
 static numeri *numeri_cache = (numeri *) DTIM_BASE;
-static const size_t numeri_cnt = 8;
+static const size_t numeri_cnt = 16;
 
 uint32_t numeri_size(numeri *a) {
 	uint32_t curr_byte = NUMERI_MAX_BYTES-1;
@@ -78,11 +79,11 @@ void numeri_set(numeri *a, int b) {
 	*((uint32_t *)&a->data) = b;
 }
 
-void numeri_copy(numeri *a, numeri *b) {
+void numeri_copy(numeri *a, numeri *c) {
 	uint32_t *awp = (uint32_t *)&a->data;
-	uint32_t *bwp = (uint32_t *)&b->data;
+	uint32_t *cwp = (uint32_t *)&c->data;
 	for (size_t word_idx = 0; word_idx < NUMERI_MAX_BYTES/sizeof(uint32_t); word_idx++) {
-		bwp[word_idx] = awp[word_idx];
+		cwp[word_idx] = awp[word_idx];
 	}
 }
 
@@ -111,9 +112,22 @@ void numeri_add(numeri *a, numeri *b, numeri *c) {
 	}
 }
 
+void numeri_or(numeri *a, numeri *b, numeri *c) {
+	// OR numeris word by word
+	uint16_t temp = 0;
+	
+	uint32_t *awp = (uint32_t *)&a->data;
+	uint32_t *bwp = (uint32_t *)&b->data;
+	uint32_t *cwp = (uint32_t *)&c->data;
+	for (size_t word_idx = 0; word_idx < NUMERI_MAX_BYTES/sizeof(uint32_t); word_idx++) {
+		cwp[word_idx] = awp[word_idx] | bwp[word_idx];
+	}
+}
+
 bool numeri_sub(numeri *a, numeri *b, numeri *c) {
 	// We don't have negative numbers, so bail if that would happen
 	if (numeri_is_bigger(b, a)) {
+		numeri_copy(a, c);
 		return false;
 	}
 
@@ -161,20 +175,121 @@ void numeri_mul(numeri *a, numeri *b, numeri *c) {
 	numeri_free(temp);
 }
 
-void numeri_mod(numeri *a, numeri *b, numeri *n) {
-	// Zero result to avoid interference
-	numeri_clean(b);
+static void numeri_lshift_1(numeri *ac) {
+	for (size_t byte_idx = (NUMERI_MAX_BYTES - 1); byte_idx > 0; byte_idx--) {
+		ac->data[byte_idx] = (ac->data[byte_idx] << 1) | (ac->data[byte_idx - 1] >> 7);
+	}
+	ac->data[0] <<= 1;
+}
 
-	if (numeri_size(a) < numeri_size(n)) {
-		numeri_copy(a, b);
+static void numeri_rshift_1(numeri *ac) {
+	for (size_t byte_idx = 0; byte_idx < (NUMERI_MAX_BYTES - 2); byte_idx++) {
+		ac->data[byte_idx] = (ac->data[byte_idx] >> 1) | (ac->data[byte_idx + 1] << 7);
+	}
+	ac->data[NUMERI_MAX_BYTES-1] >>= 1;
+}
+
+void numeri_div(numeri *a, numeri *b, numeri *c) {
+	// Zero result to avoid interference
+	numeri_clean(c);
+
+	// Long division
+	numeri *mulp = numeri_alloc();
+	numeri *denom = numeri_alloc();
+	numeri *temp = numeri_alloc();
+	numeri_set(mulp, 1);
+	numeri_copy(b, denom);
+	numeri_copy(a, temp);
+
+	bool overflow = false;
+	while (numeri_is_bigger(a, denom)) {
+		// Basically brute-force the denominator
+		if (denom->data[NUMERI_MAX_BYTES-1] >= 0x80) {
+			overflow = true;
+			break;
+		}
+
+		numeri_lshift_1(mulp);
+		numeri_lshift_1(denom);
+	}
+
+	if (overflow == false) {
+		numeri_rshift_1(mulp);
+		numeri_rshift_1(denom);
+	}
+
+	// Apply denominator to find dividend
+	while (numeri_size(mulp) != 0) {
+		if (numeri_is_bigger(temp, denom)) {
+			numeri_sub(temp, denom, temp);
+			numeri_or(c, mulp, c);
+		}
+
+		numeri_rshift_1(mulp);
+		numeri_rshift_1(denom);
+	}
+
+	// Free temporary numeris, off you go into the sunset
+	numeri_free(mulp);
+	numeri_free(denom);
+	numeri_free(temp);
+}
+
+/* c = a^b */
+/* Neither fast, nor accurate, but provides a reasonable result in a reasonable time */
+static void numeri_pow_slow(numeri *a, uint32_t b, numeri *c) {
+	numeri *temp = numeri_alloc();
+	size_t limit = int_sqrt(b);
+
+	numeri_copy(a, c);
+	for (size_t i = 0; i < limit; i++) {
+		numeri_mul(c, c, temp);
+		numeri_copy(temp, c);
+	}
+
+	// Free temporary numeri, off you go into the sunset
+	numeri_free(temp);
+}
+
+/* Shifts a numeri left such that it reaches a certain length in bytes */
+static void numeri_shift_to_length(numeri *a, uint32_t len, numeri *c) {
+	uint32_t size_diff = (len - (numeri_size(a) / 8));
+
+	for (size_t byte_idx = size_diff; byte_idx < NUMERI_MAX_BYTES; byte_idx++) {
+		c->data[byte_idx] = a->data[byte_idx - size_diff];
+	}
+}
+
+void numeri_mod(numeri *a, numeri *n, numeri *c) {
+	// Zero result to avoid interference
+	numeri_clean(c);
+
+	// Check bitsizes
+	uint32_t size_a = numeri_size(a);
+	uint32_t size_n = numeri_size(n);
+	uint32_t size_diff = (size_a - size_n) - 1;
+
+	if (size_a < size_n) {
+		numeri_copy(a, c);
 		return;
 	}
+
+	// This is the Shortening of the Way (TODO)
+	numeri *temp = numeri_alloc();
+
+	// Substract n from a until we would go negative, in single n steps
+	numeri_copy(a, temp);
+	while (numeri_sub(temp, n, c)) {
+		numeri_copy(c, temp);
+		numeri_clean(c);
+	}
+
+	// Free temporary numeris, off you go into the sunset
+	numeri_free(temp);
 }
 
 void numeri_pow(numeri *a, uint32_t b, numeri *c, numeri *n) {
 	// Zero result to avoid interference
 	numeri_clean(c);
-
-	numeri *curr_pow = numeri_alloc();
-	uint32_t pow_lvl = 1;
+	// TODO
 }
