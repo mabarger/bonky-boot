@@ -44,6 +44,20 @@ bool numeri_is_bigger(numeri *a, numeri *b) {
 	}
 }
 
+// Aka strcmp, returns 0 if they are equal, -1 if a is smaller than b, 1 if a is bigger than b
+int numeri_cmp(numeri *a, numeri *b) {
+	size_t curr_byte = NUMERI_MAX_BYTES - 1;
+
+	while (curr_byte) {
+		if(a->data[curr_byte] != b->data[curr_byte]) {
+			return a->data[curr_byte] > b->data[curr_byte] ? 1 : -1;
+		}
+		curr_byte--;
+	}
+
+	return 0;
+}
+
 bool numeri_init() {
 	// Initialize the numeri cache
 	numeri *curr_numeri = numeri_cache;
@@ -125,12 +139,6 @@ void numeri_or(numeri *a, numeri *b, numeri *c) {
 }
 
 bool numeri_sub(numeri *a, numeri *b, numeri *c) {
-	// We don't have negative numbers, so bail if that would happen
-	if (numeri_is_bigger(b, a)) {
-		numeri_copy(a, c);
-		return false;
-	}
-
 	// Substract numeris byte by byte
 	uint16_t a_inv = 0;
 	uint16_t b_bor = 0;
@@ -183,7 +191,7 @@ static void numeri_lshift_1(numeri *ac) {
 }
 
 static void numeri_rshift_1(numeri *ac) {
-	for (size_t byte_idx = 0; byte_idx < (NUMERI_MAX_BYTES - 2); byte_idx++) {
+	for (size_t byte_idx = 0; byte_idx < (NUMERI_MAX_BYTES - 1); byte_idx++) {
 		ac->data[byte_idx] = (ac->data[byte_idx] >> 1) | (ac->data[byte_idx + 1] << 7);
 	}
 	ac->data[NUMERI_MAX_BYTES-1] >>= 1;
@@ -203,7 +211,7 @@ void numeri_div(numeri *a, numeri *b, numeri *c) {
 
 	bool overflow = false;
 	while (numeri_is_bigger(a, denom)) {
-		// Basically brute-force the denominator
+		// Approximate denominator
 		if (denom->data[NUMERI_MAX_BYTES-1] >= 0x80) {
 			overflow = true;
 			break;
@@ -218,9 +226,9 @@ void numeri_div(numeri *a, numeri *b, numeri *c) {
 		numeri_rshift_1(denom);
 	}
 
-	// Apply denominator to find dividend
+	// Apply denominator to find divisor
 	while (numeri_size(mulp) != 0) {
-		if (numeri_is_bigger(temp, denom)) {
+		if (numeri_cmp(temp, denom) >= 0) {
 			numeri_sub(temp, denom, temp);
 			numeri_or(c, mulp, c);
 		}
@@ -264,28 +272,22 @@ void numeri_mod(numeri *a, numeri *n, numeri *c) {
 	// Zero result to avoid interference
 	numeri_clean(c);
 
-	// Check bitsizes
-	uint32_t size_a = numeri_size(a);
-	uint32_t size_n = numeri_size(n);
-	uint32_t size_diff = (size_a - size_n) - 1;
-
-	if (size_a < size_n) {
+	if (numeri_size(a) < numeri_size(n)) {
 		numeri_copy(a, c);
 		return;
 	}
 
-	// This is the Shortening of the Way (TODO)
-	numeri *temp = numeri_alloc();
+	// This is the Shortening of the Way
+	numeri *divisor = numeri_alloc();
+	numeri *approx = numeri_alloc();
 
-	// Substract n from a until we would go negative, in single n steps
-	numeri_copy(a, temp);
-	while (numeri_sub(temp, n, c)) {
-		numeri_copy(c, temp);
-		numeri_clean(c);
-	}
+	numeri_div(a, n, divisor);
+	numeri_mul(divisor, n, approx);
+	numeri_sub(a, approx, c);
 
 	// Free temporary numeris, off you go into the sunset
-	numeri_free(temp);
+	numeri_free(divisor);
+	numeri_free(approx);
 }
 
 void numeri_pow(numeri *a, uint32_t b, numeri *c, numeri *n) {
