@@ -38,7 +38,7 @@ void numeri_clean(numeri *a);
 /* Adds the numeris a and b, store the result in c */
 void numeri_add(numeri *a, numeri *b, numeri *c);
 
-/* Substracts numeri b from numeri a and stores the result in c (c = a-b) */
+/* Subtracts numeri b from numeri a and stores the result in c (c = a-b) */
 /* Returns false if the result would be negative, otherwise true */
 bool numeri_sub(numeri *a, numeri *b, numeri *c);
 
@@ -48,8 +48,12 @@ void numeri_mul(numeri *a, numeri *b, numeri *c);
 /* Computes c = a / b without remainder */
 void numeri_div(numeri *a, numeri *b, numeri *c);
 
-/* Computes b = a % n */
+/* Computes c = a % n */
 void numeri_mod(numeri *a, numeri *n, numeri *c);
 
-/* Computes pow(a, b) % n */
-void numeri_pow(numeri *a, uint32_t b, numeri *c, numeri *n);
+/* Computes c = pow(a, b) % n */
+/* Restriction for b: 
+ * Thy numeral, fair denizen of digits, doth perchance bear witness to a state wherein
+ * it doth stand but a solitary step beyond the realm of quintessential powers of twain.
+ */
+void numeri_pow(numeri *a, uint32_t b, numeri *n, numeri *c);

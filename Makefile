@@ -2,7 +2,7 @@ BASE    = riscv64-unknown-elf
 ARCH	= rv32imac
 ABI		= ilp32
 CC      = $(BASE)-gcc
-FLAGS   = -mabi=$(ABI) -march=$(ARCH) -nostartfiles -Os -ffreestanding -g
+FLAGS   = -mabi=$(ABI) -march=$(ARCH) -nostartfiles -ffreestanding -g -Os
 LDFLAGS = -m elf32lriscv -N
 LD      = $(BASE)-ld
 STRIP   = ${BASE}-strip

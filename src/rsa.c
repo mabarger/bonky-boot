@@ -12,6 +12,6 @@ bool verify_signature(uint8_t *signature, uint8_t *hash) {
 
 	numeri_mul(a, b, c);
 	numeri_set(b, 0xf27108);
-	numeri_mod(c, b, a);
+	numeri_pow(c, 33, b, a);
 	return true;
 }
