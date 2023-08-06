@@ -272,7 +272,7 @@ void numeri_mod(numeri *a, numeri *n, numeri *c) {
 	// Zero result to avoid interference
 	numeri_clean(c);
 
-	if (numeri_size(a) < numeri_size(n)) {
+	if (numeri_cmp(a, n) == -1) {
 		numeri_copy(a, c);
 		return;
 	}
