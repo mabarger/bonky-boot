@@ -3,7 +3,8 @@
 #include <util.h>
 
 /* Cache that contains the available big integers */
-static numeri *numeri_cache = (numeri *) DTIM_BASE;
+/* The numeri cache takes up the middle 8KB of the DTIM */
+static numeri *numeri_cache = (numeri *) DTIM_BASE + (DTIM_SIZE/4);
 static const size_t numeri_cnt = 16;
 
 uint32_t numeri_size(numeri *a) {

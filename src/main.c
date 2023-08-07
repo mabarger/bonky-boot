@@ -18,20 +18,20 @@ uint8_t signature[] = {
 	0x83, 0x3d, 0x27, 0xd0, 0x32, 0x41, 0x30, 0xe1, 0x48, 0x19, 0xdb, 0xe6, 0x01, 0x8f, 0xa3, 0x7c,
 };
 
+const size_t data_len = 10;
+char data[] = {'b', 'o', 'n', 'k', 'y', '-', 'b', 'o', 'o', 't'};
+
 void __main(void) {
-	uint8_t hash[SHA256_DIGEST_SIZE] = {
-		0xd2, 0x05, 0xfa, 0x6A, 0x4d, 0x0e, 0xa5, 0xd0,
-		0x84, 0x52, 0x4b, 0x99, 0x8e, 0xcd, 0x8d, 0xf3,
-		0x54, 0x93, 0x48, 0x46, 0xad, 0x90, 0xb8, 0x6e,
-		0x9a, 0x14, 0x98, 0x97, 0x54, 0xa6, 0x97, 0x87,
-	};
+	uint8_t hash[SHA256_DIGEST_SIZE];
 
 	print("\nHello from the best ISA\n");
 
-	/* Compute hash over software to boot */
-	//sha256(XIPM_BASE, 8, hash);
+	// Compute hash over software to boot
+	// The first version is for debugging purposes, the second one is for practical use
+	sha256((uint8_t *) data, data_len, hash);
+	//sha256((uint8_t *) XIPM_BASE, data_len, hash);
 
-	// TODO: Verify signature from software
+	// Verify signature from software
 	numeri_init();
 	if (rsa_verify(signature, hash) == false) {
 		print("[!] Invalid Signature!\n");
@@ -39,7 +39,7 @@ void __main(void) {
 		while(true) {};
 	}
 
-	// Transfer execution to .... where exactly?
+	// Transfer execution to .... the second stage?
 	print("[+] Valid Signature\n");
 	print("[~] Transferring Execution ...\n");
 	while(true) {};

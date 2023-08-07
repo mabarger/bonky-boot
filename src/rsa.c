@@ -33,7 +33,7 @@ bool rsa_verify(uint8_t *signature, uint8_t *hash) {
 
 	// Check computed hash
 	for (size_t byte_idx = 0; byte_idx < SHA256_DIGEST_SIZE; byte_idx++) {
-		if (hash[byte_idx] != h->data[byte_idx]) {
+		if (hash[byte_idx] != h->data[SHA256_DIGEST_SIZE - (byte_idx + 1)]) {
 			signature_valid = false;
 			break;
 		}

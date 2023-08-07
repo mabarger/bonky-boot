@@ -1,6 +1,6 @@
 BASE    = riscv64-unknown-elf
 ARCH	= rv32imac
-ABI		= ilp32
+ABI	= ilp32
 CC      = $(BASE)-gcc
 FLAGS   = -mabi=$(ABI) -march=$(ARCH) -nostartfiles -ffreestanding -g -Os
 LDFLAGS = -m elf32lriscv -N
@@ -29,7 +29,7 @@ clean:
 	rm -f *.o bonky-boot.elf bonky-boot.img
 
 run: bonky-boot.img
-	$(QEMU) $(QEMUOPTS) &
+	$(QEMU) $(QEMUOPTS)
 
 gdb: bonky-boot.img
 	$(QEMU) $(QEMUOPTS_GDB) &
