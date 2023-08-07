@@ -133,14 +133,22 @@ state:
 .endm
 
 .macro sha256_save a, b, c, d, e, f, g, h, destination
-	sw \a, 0(\destination)
-	sw \b, 4(\destination)
-	sw \c, 8(\destination)
-	sw \d, 12(\destination)
-	sw \e, 16(\destination)
-	sw \f, 20(\destination)
-	sw \g, 24(\destination)
-	sw \h, 28(\destination)
+	swap_endianness \a
+	sw t0, 0(\destination)
+	swap_endianness \b
+	sw t0, 4(\destination)
+	swap_endianness \c
+	sw t0, 8(\destination)
+	swap_endianness \d
+	sw t0, 12(\destination)
+	swap_endianness \e
+	sw t0, 16(\destination)
+	swap_endianness \f
+	sw t0, 20(\destination)
+	swap_endianness \g
+	sw t0, 24(\destination)
+	swap_endianness \h
+	sw t0, 28(\destination)
 .endm
 
 # uses epsilon0, epsilon1, ch, maj (can't use t0-t2)
@@ -414,36 +422,28 @@ sha256:
 				la t4, h
 				lw t1, 0(t4)
 				add s2, s2, t1
-				swap_endianness s2
-				sw t0, 0(t4)
+				sw s2, 0(t4)
 				lw t1, 4(t4)
 				add s3, s3, t1
-				swap_endianness s3
-				sw t0, 4(t4)
+				sw s3, 4(t4)
 				lw t1, 8(t4)
 				add s4, s4, t1
-				swap_endianness s4
-				sw t0, 8(t4)
+				sw s4, 8(t4)
 				lw t1, 12(t4)
 				add s5, s5, t1
-				swap_endianness s5
-				sw t0, 12(t4)
+				sw s5, 12(t4)
 				lw t1, 16(t4)
 				add s6, s6, t1
-				swap_endianness s6
-				sw t0, 16(t4)
+				sw s6, 16(t4)
 				lw t1, 20(t4)
 				add s7, s7, t1
-				swap_endianness s7
-				sw t0, 20(t4)
+				sw s7, 20(t4)
 				lw t1, 24(t4)
 				add s8, s8, t1
-				swap_endianness s8
-				sw t0, 24(t4)
+				sw s8, 24(t4)
 				lw t1, 28(t4)
 				add s9, s9, t1
-				swap_endianness s9
-				sw t0, 28(t4)
+				sw s9, 28(t4)
 			
 			j outer_loop
 
