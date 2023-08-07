@@ -5,6 +5,7 @@
 /* Big integer type */
 typedef struct numeri {
 	bool    used;
+	uint8_t padding[3];
 	uint8_t data[NUMERI_MAX_BYTES];
 } numeri;
 
