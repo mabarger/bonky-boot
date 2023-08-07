@@ -24,7 +24,7 @@ state:
 .endm
 
 # use t0, t1, t2, returns t0
-.macro little_to_big register
+.macro swap_endianness register
 	#lw \register, 0(\address)
 	mv t1, \register
 	mv t2, x0
@@ -44,6 +44,10 @@ state:
 	slli t1, t1, 24
 	or t2, t2, t1
 	mv t0, t2
+.endm
+
+.macro big_to_little register
+	mv t1, \register
 .endm
 
 # t0, t1, t2, returns t0
@@ -245,7 +249,7 @@ state:
 	# and its the length in t0
 	#lw t0, 0(t2)
 	lw t0, 0(\address)
-	little_to_big t0
+	swap_endianness t0
 	# we need to zero out the extra data
 	# and add the famous 1 bit
 	# get a register that is 0xFFFFFFFF
@@ -300,7 +304,7 @@ sha256:
 				# load te current 4 byte word
 				lw t0, 0(a0)
 				# swap endianess
-				little_to_big t0
+				swap_endianness t0
 				# store the word with the new endianess in the target
 				sw t0, 0(t4)
 				# move the target state address
@@ -328,7 +332,7 @@ sha256:
 				# load te current 4 byte word
 				lw t0, 0(a0)
 				# swap endianess
-				little_to_big t0
+				swap_endianness t0
 				# store the word with the new endianess in the target
 				sw t0, 0(t4)
 				# move the target state address
@@ -345,7 +349,7 @@ sha256:
 			sw t0, 0(t4)
 			addi t4, t4, 4
 			# why don't we switch endianess here?
-			#little_to_big s1
+			#_to_big s1
 			# zero fill everything else
 			zero_fill:
 				sw x0, 0(t4)
@@ -407,31 +411,39 @@ sha256:
 			round_end:
 				# sum the original h0-h7 again as per specification
 				# and update h0-h7 with these round ones
-				la t0, h
-				lw t1, 0(t0)
+				la t4, h
+				lw t1, 0(t4)
 				add s2, s2, t1
-				sw s2, 0(t0)
-				lw t1, 4(t0)
+				swap_endianness s2
+				sw t0, 0(t4)
+				lw t1, 4(t4)
 				add s3, s3, t1
-				sw s3, 4(t0)
-				lw t1, 8(t0)
+				swap_endianness s3
+				sw t0, 4(t4)
+				lw t1, 8(t4)
 				add s4, s4, t1
-				sw s4, 8(t0)
-				lw t1, 12(t0)
+				swap_endianness s4
+				sw t0, 8(t4)
+				lw t1, 12(t4)
 				add s5, s5, t1
-				sw s5, 12(t0)
-				lw t1, 16(t0)
+				swap_endianness s5
+				sw t0, 12(t4)
+				lw t1, 16(t4)
 				add s6, s6, t1
-				sw s6, 16(t0)
-				lw t1, 20(t0)
+				swap_endianness s6
+				sw t0, 16(t4)
+				lw t1, 20(t4)
 				add s7, s7, t1
-				sw s7, 20(t0)
-				lw t1, 24(t0)
+				swap_endianness s7
+				sw t0, 20(t4)
+				lw t1, 24(t4)
 				add s8, s8, t1
-				sw s8, 24(t0)
-				lw t1, 28(t0)
+				swap_endianness s8
+				sw t0, 24(t4)
+				lw t1, 28(t4)
 				add s9, s9, t1
-				sw s9, 28(t0)
+				swap_endianness s9
+				sw t0, 28(t4)
 			
 			j outer_loop
 
