@@ -3,7 +3,7 @@
 
 To ensure the integrity of the public key and the code used to verify the signature, we place the whole implementation in the OTP (one-time programmable) RAM on the chip. As this RAM can be programmed exactly one time by burning a fuse, both code and key are protected from modifications.
 
-A limitation to consider here is that this OTP memory only has 8KiB in size, imposing size constraints upon the software as the whole `bonky-boot` has to fit within these 8KiB. Memory-efficient design is therefore the core principle of this implementation.
+A limitation to consider here is that this OTP memory only has 8KiB in size, imposing size constraints upon the software as the whole `bonky-boot` has to fit within these 8KiB. Memory-efficient design is therefore the core principle of this implementation, which is 4KiB big in total, so plenty of space left in those 8KiB for e.g. a spi display driver.
 
 ## SHA256
 The `sha256` has been written from scratch directly in assembly. It uses as little RAM as possible and exploits the larger availability of registers compared to other architectures. It uses 32 bytes for the initial hash constants that get replaced with the computed ones at the end of the processing of every block, 256 bytes for the 64 `k` words that are immutable and 64 bytes for the `state`. While usual implemenetations allocate 64 words, one for each of the rounds, this one uses only 16 words, progressively replacing the older ones since they are no longer needed. Furthermore, the hashing context is just plain registers, thus no extra memory read or write operations happens.

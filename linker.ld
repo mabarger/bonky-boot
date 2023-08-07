@@ -1,3 +1,10 @@
+OUTPUT_ARCH("riscv")
+
+MEMORY
+{
+	ram(wxa!ri): ORIGIN = 0x80000000, LENGTH = 0x4000
+}
+
 SECTIONS
 {
   . = 0x80000000;
@@ -5,9 +12,9 @@ SECTIONS
   {
     boot.o (.text)
     *(.text)
-  }
-  .data : { *(.data) }
-  .bss  : { *(.bss) }
+  } > ram
+  .data : { *(.data) } > ram
+  .bss  : { *(.bss) } > ram
 
   /DISCARD/ : {
         *(.riscv.attributes)
