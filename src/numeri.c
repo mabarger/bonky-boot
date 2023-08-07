@@ -272,7 +272,7 @@ void numeri_mod(numeri *a, numeri *n, numeri *c) {
 	// Zero result to avoid interference
 	numeri_clean(c);
 
-	if (numeri_size(a) < numeri_size(n)) {
+	if (numeri_cmp(a, n) == -1) {
 		numeri_copy(a, c);
 		return;
 	}
@@ -290,8 +290,29 @@ void numeri_mod(numeri *a, numeri *n, numeri *c) {
 	numeri_free(approx);
 }
 
-void numeri_pow(numeri *a, uint32_t b, numeri *c, numeri *n) {
+void numeri_pow(numeri *a, uint32_t b, numeri *n, numeri *c) {
 	// Zero result to avoid interference
 	numeri_clean(c);
-	// TODO
+
+	uint32_t curr_e = 1;
+	uint32_t npot_e = b-1;
+
+	numeri *square = numeri_alloc();
+	numeri *temp = numeri_alloc();
+
+	// Square and Multiply approximation
+	numeri_copy(a, temp);
+	while (curr_e != npot_e) {
+		numeri_mul(temp, temp, square);
+		numeri_mod(square, n, temp);
+		curr_e *= 2;
+	}
+
+	// Transfer result and do final mul/mod
+	numeri_mul(temp, a, square);
+	numeri_mod(square, n, c);
+
+	// Free temporary numeris, off you go into the sunset
+	numeri_free(temp);
+	numeri_free(square);
 }
