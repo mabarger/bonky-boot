@@ -1,4 +1,4 @@
-# bonky-boot
+# bonky-boot 🦦
 `bonky-boot` is a lightweight secure boot implementation for the RISC-V ISA, specifically the `FE310-G002` chip. It performs an RSA signature check to ensure the integrity and authenticity of the next software in the chain, before transferring execution to it.
 
 To ensure the integrity of the public key and the code used to verify the signature, we place the whole implementation in the OTP (one-time programmable) ROM on the chip. As this RAM can be programmed exactly one time by burning a fuse, both code and key are protected from modifications.
