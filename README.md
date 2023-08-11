@@ -26,6 +26,11 @@ Flashing OTP memory is board dependant. For the FE310-G002, the procedure is des
   9. _REVERIFY_ the rewritten bits setting `otp_mrr=0xF`. Steps 7, 8 may be repeated up to10 times before failing the part.
   10. _UNLOCK_ the otp by writing 0x0 to otp_lock.
 
+### Demo
+To test the code in qemu, first install it and the required cross compilation toolchains for riscv, then run:
+
+`make run`
+
 ## SHA256
 The `sha256` has been written from scratch directly in assembly. The resulting stripped binary size is just under 2KiB, even though, if neded, it could be shrinked even further by replacing the most common macros with jumps. It uses as little RAM as possible and exploits the larger availability of registers compared to other architectures. It uses 32 bytes for the initial hash constants that get replaced with the computed ones at the end of the processing of every block, 256 bytes for the 64 `k` words that are immutable and 64 bytes for the `state`. While usual implemenetations allocate 64 words, one for each of the rounds, this one uses only 16 words, progressively replacing the older ones since they are no longer needed and bringing the total ram requirement to just 352 bytes. Furthermore, the hashing context is just plain registers, thus no extra memory read or write operations happens. Input is expected little endian, and is converted in order to perform the algorithm correctly. Output is converted back in little endian format to provide the expected result.
 
