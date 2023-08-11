@@ -1,7 +1,7 @@
 # bonky-boot 🦦
-`bonky-boot` is a lightweight secure boot implementation for the RISC-V ISA, specifically the (https://starfivetech.com/uploads/fe310-g002-manual-v1p0.pdf)[FE310-G002] chip. It performs an RSA signature check to ensure the integrity and authenticity of the next software in the chain, before transferring execution to it.
+`bonky-boot` is a lightweight secure boot implementation for the RISC-V ISA, specifically the [FE310-G002](https://starfivetech.com/uploads/fe310-g002-manual-v1p0.pdf) chip. It performs an RSA signature check to ensure the integrity and authenticity of the next software in the chain, before transferring execution to it.
 
-To ensure the integrity of the public key and the code used to verify the signature, we place the whole implementation in the OTP (one-time programmable) ROM on the chip. As this RAM can be programmed exactly one time by burning a fuse, both code and key are protected from modifications.
+To ensure the integrity of the public key and the code used to verify the signature, we place the whole implementation in the OTP (one-time programmable) ROM on the chip. As this OTP can be programmed exactly one time by burning a fuse, both code and key are protected from modifications.
 
 A limitation to consider here is that this OTP memory only has 8KiB in size, imposing size constraints upon the software as the whole `bonky-boot` has to fit within these 8KiB. Memory-efficient design is therefore the core principle of this implementation, which is 4KiB big in total, so plenty of space left in those 8KiB for e.g. a spi display driver.
 
